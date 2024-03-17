@@ -1,0 +1,6 @@
+## defaults for _all_ profiles
+[default]
+address = "0.0.0.0"
+port = 8080
+[default.databases.VictronPostgres]
+url = "postgresql://BENUTZER:PASSWORT@localhost/victron"

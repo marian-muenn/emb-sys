@@ -1,0 +1,75 @@
+version: "3"
+services:
+  ha:
+    image: "haproxy:latest"
+    volumes:
+      - "./ha/haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg:ro"
+      - "./ha/cors.lua:/etc/cors.lua:ro"
+      - "./ha/ssl/:/etc/ssl:ro"
+      - "ha_logs/:/var/log/ha"
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    restart: always
+    ports:
+      - "8883:8883"
+      - "18083:18083"
+      - "443:443"
+    networks:
+      default:
+        aliases:
+          - ha
+
+  emqx:
+    image: emqx/emqx:5.2
+    environment:
+      # Cluster
+      - "EMQX_NODE__NAME=emqx1"
+      - "EMQX_NODE__COOKIE=aasdxxasdasdsdaglkofn"
+      - "EMQX_CLUSTER__DISCOVERY_STRATEGY=static"
+      - "EMQX_CLUSTER__STATIC__SEEDS=[emqx1]"
+      # Dashboard user
+      - "EMQX_DASHBOARD__DEFAULT_USERNAME=USERNAME"
+      - "EMQX_DASHBOARD__DEFAULT_PASSWORD=PASSWORD"
+      # MQTT user
+      - "EMQX_AUTH__USER__1__USERNAME=USERNAME2"
+      - "EMQX_AUTH__USER__1__PASSWORD=PASSWORD2"
+      - "EMQX_ALLOW_ANONYMOUS=false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
+      - emqx_etc:/opt/emqx/etc
+    networks:
+      default:
+        aliases:
+          - emqx1
+
+  timescaledb:
+    image: timescale/timescaledb-ha:pg14-latest
+    environment:
+      - POSTGRES_PASSWORD=DB_PASSWORD
+    ports:
+      - "5432:5432"
+    networks:
+      default:
+        aliases:
+          - timescaledb
+    volumes:
+      - timescaledb_data:/home/postgres/pgdata/data
+  grafana:
+    image: grafana/grafana-oss
+    networks:
+      default:
+        aliases:
+          - grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  timescaledb_data:
+  emqx_etc:
+  grafana_data:
+  ha_logs:
+
+networks:
+  default:
